@@ -1,0 +1,14 @@
+//
+// Created by dmitry on 31.07.2021.
+//
+
+#ifndef OBJECTSQUEUEFILE_LOOPDISKARRAY_H
+#define OBJECTSQUEUEFILE_LOOPDISKARRAY_H
+
+
+class LoopDiskArray {
+
+};
+
+
+#endif //OBJECTSQUEUEFILE_LOOPDISKARRAY_H
