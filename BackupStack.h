@@ -17,7 +17,7 @@ struct FileField {
 
 
 class BackupStack  {
-    StackList <FileField> stackList;
+    StackList <FileField *> stackList;
 public:
     void push (FileField fileField);
     FileField pop ();

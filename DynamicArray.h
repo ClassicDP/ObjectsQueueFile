@@ -11,8 +11,8 @@ public:
     uint32_t size{};
     T *data;
 
-    DynamicArray(uint32_t size);
-    DynamicArray(char const *msg);
+    explicit DynamicArray(uint32_t size);
+    explicit DynamicArray(char const *msg);
 
     T &operator[](uint32_t i) {
         return data[i];
