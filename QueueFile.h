@@ -7,9 +7,9 @@
 
 
 #include <cstdint>
-#include "BackupStack.h"
-
-
+#include <set>
+#include "HeaderBuf.h"
+#include "QueueObject.h"
 
 
 struct FileHeaderStruct {
@@ -25,19 +25,19 @@ struct FileHeaderStruct {
 };
 
 
-class QueueFile {
+class QueueFile: HeaderBuf {
     static FileHeaderStruct * fileHeader;
-    static FileField fileField;
 
 public:
     static int fileDescriptor;
-    static BackupStack backupStack;
+    static std::set <HeaderBuf*> objectsSet;
     const char * fileName;
     explicit QueueFile (const char * fileName);
     ~QueueFile();
     static FileHeaderStruct getHeader();
-    static FileHeaderStruct * setHeader();
+    FileHeaderStruct * setHeader();
     void put(const char * object);
+    void writeChanges();
 
 
 };

@@ -3,8 +3,9 @@
 #define OBJECTSQUEUEFILE_QUEUEOBJECT_H
 
 #include <cinttypes>
-#include "BackupStack.h"
 #include "DynamicArray.h"
+#include "HeaderBuf.h"
+
 struct ObjectHeaderStruct {
     int64_t ptr;
     int64_t size;
@@ -16,31 +17,29 @@ struct ObjectHeaderStruct {
     bool isLast;
 };
 
-class QueueObject {
-    QueueObject(int64_t ptr, int64_t size);
-
+class QueueObject: HeaderBuf {
     ObjectHeaderStruct *header;
-    FileField fileField;
+    bool headerOnly;
+
+
 public:
     const char *data;
-    explicit QueueObject(const char *data);
+
+    QueueObject(int64_t ptr, int64_t size);
+    // load only header
     QueueObject(int64_t ptr);
+    QueueObject(const char *data, QueueObject *parentObject = nullptr);
+
     ~QueueObject();
     ObjectHeaderStruct getHeader();
     ObjectHeaderStruct * setHeader();
 
-
-    DynamicArray<char> * buf;
-
-
-    void write(int64_t parentPtr, int64_t parentSize);
 
 };
 
 
 
 #include <cstdint>
-#include "BackupStack.h"
 #include "DynamicArray.h"
 
 #endif //OBJECTSQUEUEFILE_QUEUEOBJECT_H
