@@ -4,9 +4,12 @@
 #include "QueueObject.h"
 #include "QueueFile.h"
 
+
+
 std::set <HeaderBuf*> QueueFile::objectsSet;
 
-
+DynamicArray<char> * HeaderBuf::buf;
+struct HeaderBuf::BufHeader HeaderBuf::bufHeader;
 QueueObject::QueueObject(const char *data, QueueObject *parentObject) {
     int sizeOfData = 0;
     while (data[sizeOfData ++]) {}
@@ -15,18 +18,19 @@ QueueObject::QueueObject(const char *data, QueueObject *parentObject) {
     header = reinterpret_cast<ObjectHeaderStruct *>(buf->data);
     this->data = buf->data + sizeof *header;
     memcpy((void *) this->data, data, sizeOfData);
-    pwrite64(QueueFile::fileDescriptor,  buf->data, buf->size, header->ptr);
-    header->isFirst = true;
 
     if (parentObject) {
         header->prevPtr = parentObject->header->ptr;
         header->prevSize = parentObject->header->size;
         header->isFirst = false;
+        parentObject->setHeader()->nextPtr = header->ptr;
+        parentObject->setHeader()->nextSize = header->size;
+        parentObject->setHeader()->isFirst = false;
     } else header->isFirst = true;
     header->ptr =  QueueFile::getHeader().nextObjectPtr;
-    parentObject->setHeader()->nextPtr = header->ptr;
-    parentObject->setHeader()->nextSize = header->size;
-    parentObject->setHeader()->isFirst = false;
+    header->isFirst = true;
+    pwrite64(QueueFile::fileDescriptor,  buf->data, buf->size, header->ptr);
+
 }
 
 QueueObject::~QueueObject() {

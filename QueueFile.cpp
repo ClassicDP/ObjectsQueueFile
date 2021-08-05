@@ -1,6 +1,3 @@
-//
-// Created by dmitry on 30.07.2021.
-//
 
 #include <cstdio>
 #include <fcntl.h>
@@ -11,6 +8,7 @@
 
 int QueueFile::fileDescriptor;
 FileHeaderStruct * QueueFile::fileHeader;
+QueueFile * QueueFile::queueFile;
 
 
 QueueFile::QueueFile(const char *fileName) {
@@ -27,6 +25,7 @@ QueueFile::QueueFile(const char *fileName) {
         pwrite64(QueueFile::fileDescriptor, fileHeader, sizeof *fileHeader, 0);
     }
     objectsSet.clear();
+    QueueFile::queueFile = this;
 }
 
 QueueFile::~QueueFile() {
@@ -46,13 +45,13 @@ FileHeaderStruct QueueFile::getHeader() {
 FileHeaderStruct *QueueFile::setHeader() {
     bufHeader.ptr = 0;
     bufHeader.size = buf->size;
-    objectsSet.insert((HeaderBuf *)this);
+    objectsSet.insert(this);
     return fileHeader;
 
 }
 
 void QueueFile::writeChanges() {
-    auto ptr = fileHeader->backupPtr;
+    auto ptr = fileHeader->backupPtr = lseek(QueueFile::fileDescriptor, 0, SEEK_END);
     for (auto it: objectsSet) {
         pwrite64(fileDescriptor,  &it->bufHeader, sizeof it->bufHeader, ptr);
         ptr+= sizeof it->bufHeader;

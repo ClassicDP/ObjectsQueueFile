@@ -28,7 +28,9 @@ struct FileHeaderStruct {
 class QueueFile: HeaderBuf {
     static FileHeaderStruct * fileHeader;
 
+
 public:
+    static QueueFile * queueFile;
     static int fileDescriptor;
     static std::set <HeaderBuf*> objectsSet;
     const char * fileName;
@@ -38,7 +40,6 @@ public:
     FileHeaderStruct * setHeader();
     void put(const char * object);
     void writeChanges();
-
 
 };
 

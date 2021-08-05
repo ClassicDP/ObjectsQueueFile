@@ -7,8 +7,8 @@
 
 #include "DynamicArray.h"
 struct HeaderBuf {
-    DynamicArray<char> *buf;
-    struct {
+    static DynamicArray<char> *buf;
+    static struct BufHeader {
         int64_t ptr;
         int64_t size;
     } bufHeader;
