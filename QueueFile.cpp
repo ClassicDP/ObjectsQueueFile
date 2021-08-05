@@ -7,11 +7,11 @@
 
 
 int QueueFile::fileDescriptor;
-FileHeaderStruct * QueueFile::fileHeader;
-QueueFile * QueueFile::queueFile;
+FileHeaderStruct *QueueFile::fileHeader;
 
 
 QueueFile::QueueFile(const char *fileName) {
+    queueFile = this;
     this->fileName = fileName;
     remove(fileName);
     QueueFile::fileDescriptor = open(fileName, O_RDWR | O_CREAT, 0777);
@@ -22,18 +22,23 @@ QueueFile::QueueFile(const char *fileName) {
     } else {
         fileHeader->hasBackupData = false;
         fileHeader->objectsCount = 0;
+        fileHeader->nextObjectPtr = sizeof *fileHeader;
+        fileHeader->loopStartPtr = 0;
         pwrite64(QueueFile::fileDescriptor, fileHeader, sizeof *fileHeader, 0);
     }
     objectsSet.clear();
-    QueueFile::queueFile = this;
+    fileHeader->lastObjectPtr = 0;
 }
 
 QueueFile::~QueueFile() {
 
 }
 
-void QueueFile::put(const char *object) {
+void QueueFile::push(const char *object) {
     auto nextPtr = fileHeader->nextObjectPtr;
+    auto parentObject = fileHeader->lastObjectPtr ? new QueueObject(fileHeader->firstObjectPtr) : nullptr;
+    QueueObject(object, parentObject);
+    writeChanges();
 
 
 }
@@ -53,12 +58,12 @@ FileHeaderStruct *QueueFile::setHeader() {
 void QueueFile::writeChanges() {
     auto ptr = fileHeader->backupPtr = lseek(QueueFile::fileDescriptor, 0, SEEK_END);
     for (auto it: objectsSet) {
-        pwrite64(fileDescriptor,  &it->bufHeader, sizeof it->bufHeader, ptr);
-        ptr+= sizeof it->bufHeader;
-        auto tmpBuf = DynamicArray<char> (bufHeader.size);
-        pread64(fileDescriptor, tmpBuf.data, tmpBuf.size, bufHeader.ptr);
+        pwrite64(fileDescriptor, &it->bufHeader, sizeof it->bufHeader, ptr);
+        ptr += sizeof it->bufHeader;
+        auto tmpBuf = DynamicArray<char>(it->bufHeader.size);
+        pread64(fileDescriptor, tmpBuf.data, tmpBuf.size, it->bufHeader.ptr);
         pwrite64(fileDescriptor, tmpBuf.data, tmpBuf.size, ptr);
-        ptr += it->buf->size;
+        ptr += tmpBuf.size;
     }
     fileHeader->hasBackupData = true;
     pwrite64(fileDescriptor, fileHeader, sizeof *fileHeader, 0);
@@ -70,5 +75,4 @@ void QueueFile::writeChanges() {
     pwrite64(fileDescriptor, fileHeader, sizeof *fileHeader, 0);
     fsync(fileDescriptor);
     truncate(fileName, fileHeader->backupPtr);
-
 }

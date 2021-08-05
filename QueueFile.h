@@ -13,10 +13,11 @@
 
 
 struct FileHeaderStruct {
-    int64_t DataPtr;
     int64_t nextObjectPtr;
-    int64_t firstObjectSize;
+    int64_t lastObjectPtr;
+    int64_t lastObjectSize;
     int64_t firstObjectPtr;
+    int64_t firstObjectSize;
     int64_t loopStartPtr;
     int64_t loopNotTransferredPtr;
     int64_t objectsCount;
@@ -38,7 +39,7 @@ public:
     ~QueueFile();
     static FileHeaderStruct getHeader();
     FileHeaderStruct * setHeader();
-    void put(const char * object);
+    void push(const char * object);
     void writeChanges();
 
 };

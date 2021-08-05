@@ -7,6 +7,7 @@
 
 
 std::set <HeaderBuf*> QueueFile::objectsSet;
+QueueFile * QueueFile::queueFile;
 
 DynamicArray<char> * HeaderBuf::buf;
 struct HeaderBuf::BufHeader HeaderBuf::bufHeader;
@@ -18,6 +19,8 @@ QueueObject::QueueObject(const char *data, QueueObject *parentObject) {
     header = reinterpret_cast<ObjectHeaderStruct *>(buf->data);
     this->data = buf->data + sizeof *header;
     memcpy((void *) this->data, data, sizeOfData);
+    header->ptr =  QueueFile::getHeader().nextObjectPtr;
+    header->size = sizeOfData;
 
     if (parentObject) {
         header->prevPtr = parentObject->header->ptr;
@@ -26,10 +29,15 @@ QueueObject::QueueObject(const char *data, QueueObject *parentObject) {
         parentObject->setHeader()->nextPtr = header->ptr;
         parentObject->setHeader()->nextSize = header->size;
         parentObject->setHeader()->isFirst = false;
-    } else header->isFirst = true;
-    header->ptr =  QueueFile::getHeader().nextObjectPtr;
-    header->isFirst = true;
+    } else {
+        header->isFirst = true;
+        QueueFile::queueFile->setHeader()->firstObjectPtr = header->ptr;
+        QueueFile::queueFile->setHeader()->firstObjectSize = header->size;
+    }
     pwrite64(QueueFile::fileDescriptor,  buf->data, buf->size, header->ptr);
+    QueueFile::queueFile->setHeader()->nextObjectPtr = header->ptr + buf->size;
+    QueueFile::queueFile->setHeader()->lastObjectPtr = header->ptr;
+    QueueFile::queueFile->setHeader()->lastObjectSize = header->size;
 
 }
 
