@@ -8,7 +8,7 @@
 
 #include <cstdint>
 #include <set>
-#include "HeaderBuf.h"
+#include "BaseHeader.h"
 #include "QueueObject.h"
 
 
@@ -26,14 +26,14 @@ struct FileHeaderStruct {
 };
 
 
-class QueueFile: HeaderBuf {
+class QueueFile: BaseHeader {
     static FileHeaderStruct * fileHeader;
 
 
 public:
     static QueueFile * queueFile;
     static int fileDescriptor;
-    static std::set <HeaderBuf*> objectsSet;
+    static std::set <BaseHeader*> objectsSet;
     const char * fileName;
     explicit QueueFile (const char * fileName);
     static FileHeaderStruct getHeader();

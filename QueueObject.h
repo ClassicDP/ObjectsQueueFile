@@ -4,7 +4,7 @@
 
 #include <cinttypes>
 #include "DynamicArray.h"
-#include "HeaderBuf.h"
+#include "BaseHeader.h"
 
 struct ObjectHeaderStruct {
     int64_t ptr;
@@ -17,18 +17,20 @@ struct ObjectHeaderStruct {
     bool isLast;
 };
 
-class QueueObject: HeaderBuf {
-    ObjectHeaderStruct *header;
+class QueueObject: BaseHeader {
+    ObjectHeaderStruct *objectHeader;
     bool headerOnly;
 
 
 public:
     const char *data;
 
+    // load object from file
     QueueObject(int64_t ptr, int64_t size);
-    // load only header
-    QueueObject(int64_t ptr);
-    QueueObject(const char *data, QueueObject *parentObject = nullptr);
+    // load only objectHeader
+    explicit QueueObject(int64_t ptr);
+    // create new object, write to file
+    explicit QueueObject(const char *string, QueueObject *parentObject = nullptr);
 
     ~QueueObject();
     ObjectHeaderStruct getHeader();

@@ -3,7 +3,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include "QueueFile.h"
-#include "HeaderBuf.h"
+#include "BaseHeader.h"
 
 
 int QueueFile::fileDescriptor;
@@ -29,8 +29,8 @@ QueueFile::QueueFile(const char *fileName) {
     }
     objectsSet.clear();
     fileHeader->lastObjectPtr = 0;
-    bufHeader.ptr = 0;
-    bufHeader.size = sizeof *fileHeader;
+    headerFileField.ptr = 0;
+    headerFileField.size = sizeof *fileHeader;
 }
 
 
@@ -50,8 +50,6 @@ FileHeaderStruct QueueFile::getHeader() {
 }
 
 FileHeaderStruct *QueueFile::setHeader() {
-    bufHeader.ptr = 0;
-    bufHeader.size = sizeof *fileHeader;
     objectsSet.insert(this);
     return fileHeader;
 
@@ -60,23 +58,26 @@ FileHeaderStruct *QueueFile::setHeader() {
 void QueueFile::writeChanges() {
     setHeader()->hasBackupData = true;
     auto ptr = fileHeader->backupPtr = lseek(QueueFile::fileDescriptor, 0, SEEK_END);
+    // backup
     for (auto it: objectsSet) {
-        pwrite64(fileDescriptor, &it->bufHeader, sizeof it->bufHeader, ptr);
-        ptr += sizeof it->bufHeader;
-        DynamicArray<char> tmpBuf(it->bufHeader.size);
-        pread64(fileDescriptor, tmpBuf.data, tmpBuf.size, it->bufHeader.ptr);
+        pwrite64(fileDescriptor, &it->headerFileField, sizeof it->headerFileField, ptr);
+        ptr += sizeof it->headerFileField;
+        DynamicArray<char> tmpBuf(it->headerFileField.size);
+        pread64(fileDescriptor, tmpBuf.data, tmpBuf.size, it->headerFileField.ptr);
         pwrite64(fileDescriptor, tmpBuf.data, tmpBuf.size, ptr);
         ptr += tmpBuf.size;
     }
-    pwrite64(fileDescriptor, &fileHeader, sizeof *fileHeader, 0);
+    pwrite64(fileDescriptor, fileHeader, sizeof *fileHeader, 0);
     fsync(fileDescriptor);
+    // write new data
     for (auto it: objectsSet) {
-        pwrite64(fileDescriptor, it->buf->data, it->buf->size, it->bufHeader.ptr);
+        pwrite64(fileDescriptor, it->buf->data, it->buf->size, it->headerFileField.ptr);
     }
     objectsSet.clear();
     fileHeader->hasBackupData = false;
     pwrite64(fileDescriptor, fileHeader, sizeof *fileHeader, 0);
     fsync(fileDescriptor);
+    // delete backup data
     truncate(fileName, fileHeader->backupPtr);
 }
 
