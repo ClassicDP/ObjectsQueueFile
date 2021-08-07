@@ -19,8 +19,15 @@ int main() {
     std::cout << queueFile.pull() <<" " << queueFile.getHeader().objectsCount<< std::endl;
     std::cout << queueFile.pull() <<" " << queueFile.getHeader().objectsCount<< std::endl;
     std::cout << queueFile.pull() <<" " << queueFile.getHeader().objectsCount<< std::endl;
+    queueFile.push("Hello, World! 9 !");
+    queueFile.push("Hello, World! 10 !");
+    queueFile.push("Hello, World! 11 !");
+    queueFile.push("Hello, World! 12 !");
+    queueFile.push("Hello, World! 13 !");
     std::cout << queueFile.pull() <<" " << queueFile.getHeader().objectsCount<< std::endl;
     std::cout << queueFile.pull() <<" " << queueFile.getHeader().objectsCount<< std::endl;
     std::cout << queueFile.pull() <<" " << queueFile.getHeader().objectsCount<< std::endl;
+    std::cout << queueFile.pull() <<" " << queueFile.getHeader().objectsCount<< std::endl;
+
     return 0;
 }

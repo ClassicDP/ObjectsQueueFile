@@ -8,11 +8,12 @@
 
 int QueueFile::fileDescriptor;
 FileHeaderStruct *QueueFile::fileHeader;
+const char *QueueFile::fileName;
 
 
 QueueFile::QueueFile(const char *fileName) {
     queueFile = this;
-    this->fileName = fileName;
+    QueueFile::fileName = fileName;
     remove(fileName);
     QueueFile::fileDescriptor = open(fileName, O_RDWR | O_CREAT, 0777);
     buf = new DynamicArray<char>(sizeof *fileHeader);
@@ -24,7 +25,7 @@ QueueFile::QueueFile(const char *fileName) {
         fileHeader->hasBackupData = false;
         fileHeader->objectsCount = 0;
         fileHeader->nextObjectPtr = sizeof *fileHeader;
-        fileHeader->loopStartPtr = 0;
+        fileHeader->hasActiveTransfer = false;
         pwrite64(QueueFile::fileDescriptor, fileHeader, sizeof *fileHeader, 0);
     }
     objectsSet.clear();
@@ -39,6 +40,7 @@ void QueueFile::push(const char *object) {
     auto parentObject = fileHeader->lastObjectPtr ? new QueueObject(fileHeader->lastObjectPtr) : nullptr;
     QueueObject obj(object, parentObject);
     setHeader()->objectsCount++;
+
     writeChanges();
     delete parentObject;
 
@@ -50,13 +52,13 @@ FileHeaderStruct QueueFile::getHeader() {
 }
 
 FileHeaderStruct *QueueFile::setHeader() {
-    objectsSet.insert(this);
+    objectsSet.insert(queueFile);
     return fileHeader;
 
 }
 
 void QueueFile::writeChanges() {
-    setHeader()->hasBackupData = true;
+    fileHeader->hasBackupData = true;
     auto ptr = fileHeader->backupPtr = lseek(QueueFile::fileDescriptor, 0, SEEK_END);
     // backup
     for (auto it: objectsSet) {
@@ -78,17 +80,48 @@ void QueueFile::writeChanges() {
     pwrite64(fileDescriptor, fileHeader, sizeof *fileHeader, 0);
     fsync(fileDescriptor);
     // delete backup data
-    truncate(fileName, fileHeader->backupPtr);
+    truncate(QueueFile::fileName, fileHeader->backupPtr);
 }
 
 const char *QueueFile::pull() {
     if (getHeader().objectsCount == 0) return "";
     QueueObject obj(fileHeader->firstObjectPtr, fileHeader->firstObjectSize);
-    QueueObject objNext(obj.getHeader().nextPtr);
-    objNext.setHeader()->isFirst = true;
-    setHeader()->firstObjectPtr = objNext.getHeader().ptr;
-    setHeader()->firstObjectSize = objNext.getHeader().size;
+    QueueObject * objNext = nullptr;
+    if (!obj.getHeader().isLast) {
+        objNext = new QueueObject(obj.getHeader().nextPtr);
+        objNext->setHeader()->isFirst = true;
+        setHeader()->firstObjectPtr = objNext->getHeader().ptr;
+        setHeader()->firstObjectSize = objNext->getHeader().size;
+    }
     setHeader()->objectsCount--;
+    if (!fileHeader->hasActiveTransfer &&
+        (fileHeader->nextObjectPtr - fileHeader->firstObjectPtr) <=
+        (fileHeader->firstObjectPtr - sizeof *fileHeader)) {
+        setHeader()->nextObjectPtr = sizeof *fileHeader + fileHeader->nextObjectPtr - fileHeader->firstObjectPtr;
+        setHeader()->hasActiveTransfer = true;
+        setHeader()->transferToPtr = sizeof *fileHeader;
+        setHeader()->transferFromPtr = fileHeader->firstObjectPtr;
+    }
+    if (fileHeader->hasActiveTransfer) {
+        if (!obj.getHeader().isLast && obj.getHeader().nextPtr > obj.getHeader().ptr) {
+            if (setHeader()->transferFromPtr < obj.getHeader().nextPtr)
+                setHeader()->transferFromPtr = obj.getHeader().nextPtr;
+        }
+    }
     writeChanges();
+    delete objNext;
     return obj.data;
+}
+
+void QueueFile::transferObjects(int64_t ptr, int64_t size) {
+
+    while (fileHeader->hasActiveTransfer && (fileHeader->transferFromPtr < ptr + size)) {
+        QueueObject obj(fileHeader->transferFromPtr);
+        setHeader()->transferToPtr = obj.moveTo(fileHeader->transferToPtr);
+        if (obj.getHeader().isLast || obj.getHeader().nextPtr < obj.getHeader().ptr)
+            setHeader()->hasActiveTransfer = false;
+        else
+            setHeader()->transferFromPtr = obj.getHeader().nextPtr;
+    }
+    writeChanges();
 }

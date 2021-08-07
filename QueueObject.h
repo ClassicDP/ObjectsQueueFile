@@ -31,6 +31,7 @@ public:
     explicit QueueObject(int64_t ptr);
     // create new object, write to file
     explicit QueueObject(const char *string, QueueObject *parentObject = nullptr);
+    int64_t moveTo (int64_t ptr);
 
     ~QueueObject();
     ObjectHeaderStruct getHeader();

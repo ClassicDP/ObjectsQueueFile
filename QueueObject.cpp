@@ -27,13 +27,15 @@ QueueObject::QueueObject(const char *string, QueueObject *parentObject) {
         objectHeader->isFirst = false;
         parentObject->setHeader()->nextPtr = objectHeader->ptr;
         parentObject->setHeader()->nextSize = objectHeader->size;
+        parentObject->setHeader()->isLast = false;
     } else {
         objectHeader->isFirst = true;
         QueueFile::queueFile->setHeader()->firstObjectPtr = objectHeader->ptr;
         QueueFile::queueFile->setHeader()->firstObjectSize = objectHeader->size;
     }
     objectHeader->isLast = true;
-
+    if (QueueFile::getHeader().hasActiveTransfer)
+        QueueFile::transferObjects(objectHeader->ptr, buf->size);
     pwrite64(QueueFile::fileDescriptor, buf->data, buf->size, objectHeader->ptr);
     QueueFile::queueFile->setHeader()->nextObjectPtr = objectHeader->ptr + buf->size;
     QueueFile::queueFile->setHeader()->lastObjectPtr = objectHeader->ptr;
@@ -73,6 +75,28 @@ QueueObject::QueueObject(int64_t ptr) {
     objectHeader = reinterpret_cast<ObjectHeaderStruct *>(buf->data);
     headerOnly = true;
 
+}
+
+int64_t QueueObject::moveTo(int64_t ptr) {
+    if (objectHeader->isFirst) {
+        QueueFile::queueFile->setHeader()->firstObjectPtr = ptr;
+        QueueObject nextObj(objectHeader->nextPtr);
+        nextObj.setHeader()->prevPtr = ptr;
+    } else if (objectHeader->isLast) {
+        QueueFile::queueFile->setHeader()->lastObjectPtr = ptr;
+        QueueObject prevObj(objectHeader->prevPtr);
+        prevObj.setHeader()->nextPtr = ptr;
+    } else {
+        QueueObject nextObj(objectHeader->nextPtr);
+        QueueObject prevObj(objectHeader->prevPtr);
+        nextObj.setHeader()->prevPtr = ptr;
+        prevObj.setHeader()->nextPtr = ptr;
+    }
+    DynamicArray<char> buf(objectHeader->size+sizeof *objectHeader);
+    pread64(QueueFile::fileDescriptor, buf.data, buf.size, objectHeader->ptr);
+    pwrite64(QueueFile::fileDescriptor, buf.data, buf.size, ptr);
+    // to complete needs to call QueueFile::writeChanges();
+    return ptr + buf.size;
 }
 
 
