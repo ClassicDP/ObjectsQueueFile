@@ -36,10 +36,10 @@ public:
     static std::set <HeaderBuf*> objectsSet;
     const char * fileName;
     explicit QueueFile (const char * fileName);
-    ~QueueFile();
     static FileHeaderStruct getHeader();
     FileHeaderStruct * setHeader();
     void push(const char * object);
+    const char * pull ();
     void writeChanges();
 
 };

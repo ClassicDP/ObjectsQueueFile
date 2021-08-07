@@ -6,12 +6,15 @@
 #define OBJECTSQUEUEFILE_HEADERBUF_H
 
 #include "DynamicArray.h"
+typedef struct {
+    int64_t ptr;
+    int64_t size;} BufHeader;
 struct HeaderBuf {
-    static DynamicArray<char> *buf;
-    static struct BufHeader {
-        int64_t ptr;
-        int64_t size;
-    } bufHeader;
+    DynamicArray<char> *buf = nullptr;
+    BufHeader bufHeader;
+    ~HeaderBuf() {
+        delete buf;
+    }
 };
 
 

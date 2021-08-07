@@ -9,8 +9,6 @@
 std::set <HeaderBuf*> QueueFile::objectsSet;
 QueueFile * QueueFile::queueFile;
 
-DynamicArray<char> * HeaderBuf::buf;
-struct HeaderBuf::BufHeader HeaderBuf::bufHeader;
 QueueObject::QueueObject(const char *data, QueueObject *parentObject) {
     int sizeOfData = 0;
     while (data[sizeOfData ++]) {}
@@ -43,7 +41,6 @@ QueueObject::QueueObject(const char *data, QueueObject *parentObject) {
 
 QueueObject::~QueueObject() {
 
-
 }
 
 ObjectHeaderStruct QueueObject::getHeader() {
@@ -52,7 +49,7 @@ ObjectHeaderStruct QueueObject::getHeader() {
 
 ObjectHeaderStruct *QueueObject::setHeader() {
     bufHeader.ptr = header->ptr;
-    bufHeader.size = buf->size;
+    bufHeader.size = sizeof *header;
     QueueFile::objectsSet.insert(this);
     return header;
 }
@@ -68,6 +65,8 @@ QueueObject::QueueObject(int64_t ptr, int64_t size) {
 
 QueueObject::QueueObject(int64_t ptr) {
     buf = new DynamicArray<char> (sizeof *header);
+    bufHeader.ptr = ptr;
+    bufHeader.size = buf->size;
     pread64(QueueFile::fileDescriptor, buf->data, buf->size, ptr);
     header = reinterpret_cast<ObjectHeaderStruct *>(buf->data);
     headerOnly = true;

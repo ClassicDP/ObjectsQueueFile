@@ -4,7 +4,7 @@
 
 
 int main() {
-    auto queueFile = QueueFile("123.db");
+    QueueFile queueFile ("123.db");
     queueFile.push("Hello, World!  !");
     queueFile.push("Hello, World!  !");
     queueFile.push("Hello, World!  !");
@@ -13,6 +13,14 @@ int main() {
     queueFile.push("Hello, World!  !");
     queueFile.push("Hello, World!  !");
     queueFile.push("Hello, World!  !0");
-    std::cout << queueFile.fileName << std::endl;
+
+    std::cout << queueFile.pull() << std::endl;
+    std::cout << queueFile.pull() << std::endl;
+    std::cout << queueFile.pull() << std::endl;
+    std::cout << queueFile.pull() << std::endl;
+    std::cout << queueFile.pull() << std::endl;
+    std::cout << queueFile.pull() << std::endl;
+    std::cout << queueFile.pull() << std::endl;
+    std::cout << queueFile.pull() << std::endl;
     return 0;
 }
