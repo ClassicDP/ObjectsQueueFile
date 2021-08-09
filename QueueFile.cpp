@@ -40,7 +40,6 @@ void QueueFile::push(const char *object) {
     auto parentObject = fileHeader->lastObjectPtr ? new QueueObject(fileHeader->lastObjectPtr) : nullptr;
     QueueObject obj(object, parentObject);
     setHeader()->objectsCount++;
-
     writeChanges();
     delete parentObject;
 

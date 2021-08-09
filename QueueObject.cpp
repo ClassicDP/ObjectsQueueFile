@@ -78,23 +78,27 @@ QueueObject::QueueObject(int64_t ptr) {
 }
 
 int64_t QueueObject::moveTo(int64_t ptr) {
+    QueueObject *nextObj= nullptr, *prevObj= nullptr;
     if (objectHeader->isFirst) {
         QueueFile::queueFile->setHeader()->firstObjectPtr = ptr;
-        QueueObject nextObj(objectHeader->nextPtr);
-        nextObj.setHeader()->prevPtr = ptr;
+        nextObj = new QueueObject(objectHeader->nextPtr);
+        nextObj->setHeader()->prevPtr = ptr;
     } else if (objectHeader->isLast) {
         QueueFile::queueFile->setHeader()->lastObjectPtr = ptr;
-        QueueObject prevObj(objectHeader->prevPtr);
-        prevObj.setHeader()->nextPtr = ptr;
+        prevObj = new QueueObject(objectHeader->prevPtr);
+        prevObj->setHeader()->nextPtr = ptr;
     } else {
-        QueueObject nextObj(objectHeader->nextPtr);
-        QueueObject prevObj(objectHeader->prevPtr);
-        nextObj.setHeader()->prevPtr = ptr;
-        prevObj.setHeader()->nextPtr = ptr;
+        nextObj = new QueueObject(objectHeader->nextPtr);
+        prevObj = new QueueObject(objectHeader->prevPtr);
+        nextObj->setHeader()->prevPtr = ptr;
+        prevObj->setHeader()->nextPtr = ptr;
     }
     DynamicArray<char> buf(objectHeader->size+sizeof *objectHeader);
     pread64(QueueFile::fileDescriptor, buf.data, buf.size, objectHeader->ptr);
+    ((ObjectHeaderStruct*) buf.data)->ptr = ptr;
     pwrite64(QueueFile::fileDescriptor, buf.data, buf.size, ptr);
+    QueueFile::writeChanges();
+    delete nextObj, prevObj;
     // to complete needs to call QueueFile::writeChanges();
     return ptr + buf.size;
 }
