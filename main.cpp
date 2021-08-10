@@ -5,9 +5,18 @@
 void toLog(std::basic_string<char> str) {
     std::cout <<str << std::endl;
 }
+template<typename T>
+const char* getClassName(T) {
+    return typeid(T).name();
+}
+
+struct A {} a;
+
 
 int main() {
+
     QueueFile queueFile ("123.db");
+    std::cout << getClassName(queueFile)<< std::endl;
     queueFile.toLog();
     queueFile.push("Hello, World! 1 !");
     queueFile.toLog();

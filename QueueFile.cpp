@@ -10,6 +10,13 @@ int QueueFile::fileDescriptor;
 FileHeaderStruct *QueueFile::fileHeader;
 const char *QueueFile::fileName;
 
+void QueueFile::initHeader() {
+    fileHeader->hasBackupData = false;
+    fileHeader->objectsCount = 0;
+    fileHeader->nextObjectPtr = sizeof *fileHeader;
+    fileHeader->hasActiveTransfer = false;
+    pwrite64(QueueFile::fileDescriptor, fileHeader, sizeof *fileHeader, 0);
+}
 
 QueueFile::QueueFile(const char *fileName) {
     queueFile = this;
@@ -21,13 +28,7 @@ QueueFile::QueueFile(const char *fileName) {
     auto fSize = lseek(QueueFile::fileDescriptor, 0, SEEK_END);
     if (sizeof *fileHeader <= fSize) {
         pread64(QueueFile::fileDescriptor, fileHeader, sizeof *fileHeader, 0);
-    } else {
-        fileHeader->hasBackupData = false;
-        fileHeader->objectsCount = 0;
-        fileHeader->nextObjectPtr = sizeof *fileHeader;
-        fileHeader->hasActiveTransfer = false;
-        pwrite64(QueueFile::fileDescriptor, fileHeader, sizeof *fileHeader, 0);
-    }
+    } else initHeader();
     objectsSet.clear();
     fileHeader->lastObjectPtr = 0;
     headerFileField.ptr = 0;
@@ -64,7 +65,7 @@ void QueueFile::writeChanges() {
         pwrite64(fileDescriptor, &it->headerFileField, sizeof it->headerFileField, ptr);
         ptr += sizeof it->headerFileField;
         DynamicArray<char> tmpBuf(it->headerFileField.size);
-        pread64(fileDescriptor, tmpBuf.data, tmpBuf.size, it->headerFileField.ptr);
+//        pread64(fileDescriptor, tmpBuf.data, tmpBuf.size, it->headerFileField.ptr);
         pwrite64(fileDescriptor, tmpBuf.data, tmpBuf.size, ptr);
         ptr += tmpBuf.size;
     }
@@ -85,7 +86,7 @@ void QueueFile::writeChanges() {
 const char *QueueFile::pull() {
     if (getHeader().objectsCount == 0) return "";
     QueueObject obj(fileHeader->firstObjectPtr, fileHeader->firstObjectSize);
-    QueueObject * objNext = nullptr;
+    QueueObject *objNext = nullptr;
     if (!obj.getHeader().isLast) {
         objNext = new QueueObject(obj.getHeader().nextPtr);
         objNext->setHeader()->isFirst = true;
@@ -109,6 +110,12 @@ const char *QueueFile::pull() {
     }
     writeChanges();
     delete objNext;
+    if (fileHeader->objectsCount == 0) {
+        initHeader();
+    } else if (!fileHeader->hasActiveTransfer) {
+        truncate(QueueFile::fileName, fileHeader->nextObjectPtr);
+    }
+    fsync(QueueFile::fileDescriptor);
     return obj.data;
 }
 

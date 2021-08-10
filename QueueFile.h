@@ -81,6 +81,7 @@ public:
         }
     }
 
+    static void initHeader();
 };
 
 #endif //OBJECTSQUEUEFILE_QUEUEFILE_H
